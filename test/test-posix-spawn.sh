@@ -2,6 +2,6 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-only
 #
-# Test execl
+# Test posix_spawn, posix_spawnp
 
-./test/test-execl | grep -q "C=C"
+./test/test-posix-spawn

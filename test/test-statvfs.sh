@@ -2,6 +2,6 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-only
 #
-# Test execl
+# Test statvfs, statvfs64
 
-./test/test-execl | grep -q "C=C"
+./test/test-statvfs

@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-only
 #
-# Test execl
+# Test glob, glob64
 
-./test/test-execl | grep -q "C=C"
+rm -rf test_glob_dir
+./test/test-glob

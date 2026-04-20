@@ -2,6 +2,6 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-only
 #
-# Test execl
+# Test dup, dup2, close
 
-./test/test-execl | grep -q "C=C"
+./test/test-dup-close
