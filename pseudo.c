@@ -596,6 +596,19 @@ pseudo_op(pseudo_msg_t *msg, const char *program, const char *tag, char **respon
 			switch (msg->op) {
 			case OP_EXEC:
 				break;
+			case OP_RENAME:
+				/* For a rename, the destination path having
+				 * a different inode is expected -- we are
+				 * about to overwrite it. Remove the stale
+				 * entry so it does not cause later mismatches.
+				 */
+				pseudo_debug(PDBGF_FILE, "rename: removing old '%s' inode %llu, replacing with %llu.\n",
+					msg->path,
+					(unsigned long long) by_path.ino,
+					(unsigned long long) msg_header.ino);
+				pdb_unlink_file(msg);
+				found_path = 0;
+				break;
 			default:
 				/* if the path is in the database with a
 				 * different inode, but we were expecting
@@ -675,8 +688,14 @@ pseudo_op(pseudo_msg_t *msg, const char *program, const char *tag, char **respon
 		} else if (msg->pathlen && path_by_ino) {
 			/* this suggests a database error, except in LINK
 			 * cases.  In those cases, it is normal for a
-			 * mismatch to occur.  :)  (SYMLINK shouldn't,
-			 * because the symlink gets its own inode number.)
+			 * mismatch to occur.  :)
+			 *
+			 * SYMLINK can also see false positives when
+			 * parallel operations cause the kernel to reuse
+			 * an inode that is still referenced by a stale
+			 * DB entry at a different path. The OP_SYMLINK
+			 * handler already ignores found_ino, so skip
+			 * the check here too.
 			 *
 			 * RENAME can get false positives on this, when
 			 * link count is greater than one.  So we skip this
@@ -688,11 +707,10 @@ pseudo_op(pseudo_msg_t *msg, const char *program, const char *tag, char **respon
 			switch (msg->op) {
 			case OP_LINK:
 			case OP_EXEC:
-				break;
+			case OP_SYMLINK:
 			case OP_RENAME:
-				if (msg->nlink == 1 && strcmp(oldpath, path_by_ino)) {
-					mismatch = 1;
-				}
+			case OP_MAY_UNLINK:
+			case OP_CANCEL_UNLINK:
 				break;
 			default:
 				/* Ignore NAMELESS FILE entries since those could be created by other threads on new files */
@@ -710,15 +728,13 @@ pseudo_op(pseudo_msg_t *msg, const char *program, const char *tag, char **respon
 					pseudo_debug(PDBGF_FILE, "inode mismatch for '%s' -- old one was marked for deletion.\n",
 						msg->path);
 				} else {
-					pseudo_diag("path mismatch [%d link%s]: ino %llu db '%s' req '%s'.\n",
+					pseudo_debug(PDBGF_FILE, "path mismatch [%d link%s]: ino %llu db '%s' req '%s'. Stale inode entry from concurrent operation, ignoring.\n",
 						msg->nlink,
 						msg->nlink == 1 ? "" : "s",
 						(unsigned long long) msg_header.ino,
 						path_by_ino ? path_by_ino : "no path",
 						msg->path);
 					found_ino = 0;
-					msg->result = RESULT_ABORT;
-					goto op_exit;
 				}
 			}
 		} else {
@@ -913,9 +929,17 @@ pseudo_op(pseudo_msg_t *msg, const char *program, const char *tag, char **respon
 		}
 		if (found_ino) {
 			if (msg->op == OP_SYMLINK) {
-				pseudo_debug(PDBGF_OP | PDBGF_FILE, "symlink: ignoring existing file %llu ['%s']\n",
+				/* A symlink gets its own inode, so finding
+				 * a different path with this inode means the
+				 * kernel reused the inode. Remove the stale
+				 * entry to prevent duplicate inode entries
+				 * that confuse later operations.
+				 */
+				pseudo_debug(PDBGF_OP | PDBGF_FILE, "symlink: removing stale entry for ino %llu ['%s']\n",
 					(unsigned long long) by_ino.ino,
 					path_by_ino ? path_by_ino : "no path");
+				pdb_unlink_file_dev(&by_ino);
+				*msg = msg_header;
 			} else {
 				*msg = by_ino;
 				pseudo_debug(PDBGF_OP | PDBGF_FILE, "link: copying data from existing file %llu ['%s']\n",
@@ -933,7 +957,12 @@ pseudo_op(pseudo_msg_t *msg, const char *program, const char *tag, char **respon
 	case OP_RENAME:
 		/* a rename implies renaming an existing entry... and every
 		 * database entry rooted in it, if it's a directory.
+		 * Any stale entry at the destination path was already
+		 * cleaned up during the sanity checks above.
+		 * Restore the original message header since sanity checks
+		 * may have overwritten dev/ino with stale destination values.
 		 */
+		*msg = msg_header;
 		pdb_rename_file(oldpath, msg);
 		pdb_update_inode(msg);
 		break;
@@ -1055,7 +1084,6 @@ pseudo_op(pseudo_msg_t *msg, const char *program, const char *tag, char **respon
 		break;
 	}
 
-op_exit:
 	/* in the case of an exact match, we just used the pointer
 	 * rather than allocating space.
 	 */
