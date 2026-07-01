@@ -1050,7 +1050,7 @@ void pseudo_dropenv() {
 }
 
 char **
-pseudo_dropenvp(char * const *envp) {
+pseudo_dropenvp(char **envp) {
 	char **new_envp;
 	int i, j;
 
@@ -1081,6 +1081,7 @@ pseudo_dropenvp(char * const *envp) {
 		}
 	}
 	new_envp[j++] = NULL;
+	free(envp);
 	return new_envp;
 }
 
