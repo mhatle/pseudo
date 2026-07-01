@@ -1045,6 +1045,7 @@ void pseudo_dropenv() {
 		} else {
 			SETENV(PRELINK_LIBRARIES, "", 1);
 		}
+		free(ld_preload);
 	}
 }
 
