@@ -1242,7 +1242,7 @@ pseudo_setupenvp(char * const *envp) {
 		}
 	} else {
 		/* keep old value */
-		new_envp[j++] = ld_library_path;
+		new_envp[j++] = strdup(ld_library_path);
 	}
 
 	if (ld_preload) {
@@ -1273,7 +1273,7 @@ pseudo_setupenvp(char * const *envp) {
 	for (i = 0; envp && envp[i]; ++i) {
 		if (STARTSWITH(envp[i], PRELINK_LIBRARIES "=")) continue;
 		if (STARTSWITH(envp[i], PRELINK_PATH "=")) continue;
-		new_envp[j++] = envp[i];
+		new_envp[j++] = strdup(envp[i]);
 	}
 
 	for (i = 0; pseudo_env[i].key; i++) {
