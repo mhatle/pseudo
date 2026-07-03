@@ -85,6 +85,14 @@ test-verbose: all $(TESTS) | $(BIN) $(LIB)
 test/test-statx: test/test-statx.c
 	$(CC) $(CFLAGS) $(CFLAGS_PSEUDO) -Wno-nonnull -o $@ $<
 
+# test-bash-exec-env #includes bash's getenv.c and its shim header; make
+# those extra sources trigger a rebuild when they change.
+#
+# Add -Wno-nonnull-compare to match bash compilation configuration to silence
+# the warning because glibc declares getenv/setenv/unsetenv nonnull
+test/test-bash-exec-env: test/test-bash-exec-env.c test/bash-getenv.c test/bash-getenv-shim.h
+	$(CC) $(CFLAGS) $(CFLAGS_PSEUDO) -Wno-nonnull-compare -o $@ $<
+
 test/test-%: test/test-%.c
 	$(CC) $(CFLAGS) $(CFLAGS_PSEUDO) -o $@ $<
 

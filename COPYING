@@ -1,3 +1,11 @@
+This license covers all of the files in pseudo, except for:
+   test/bash-getenv.c: GPL v3.0 or later
+   test/bash-getenv-shim.h: GPL v3.0 or later
+   test/est-bash-exec-env.c: GPL v3.0 or later
+
+   See COPYING.GPLv3 file for the license for the above files.
+
+
 		  GNU LESSER GENERAL PUBLIC LICENSE
 		       Version 2.1, February 1999
 
