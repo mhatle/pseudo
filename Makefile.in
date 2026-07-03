@@ -81,6 +81,10 @@ test: all $(TESTS) | $(BIN) $(LIB)
 test-verbose: all $(TESTS) | $(BIN) $(LIB)
 	./run_tests.sh -v
 
+# This test explicitly checks that a null parameter works, even when unexpected!
+test/test-statx: test/test-statx.c
+	$(CC) $(CFLAGS) $(CFLAGS_PSEUDO) -Wno-nonnull -o $@ $<
+
 test/test-%: test/test-%.c
 	$(CC) $(CFLAGS) $(CFLAGS_PSEUDO) -o $@ $<
 
